@@ -1,4 +1,5 @@
 import datetime
+import warnings
 
 
 class Query:
@@ -59,7 +60,13 @@ class Query:
         return self.ToString
 
     def get_dates_array(self, date_format="datetime"):
-
+        """
+        Using this method shows all dates in query which means all days from start to end.
+        If You meant only days when stock market was open (which is probably what You wanted) then
+        consider using to_dates_array from stock_data class
+        :param date_format: format in which dates in output array are going to be returned
+        :return:
+        """
         out = []
 
         for d in range(0, (self.end_date - self.start_date).days + 1):

@@ -1,10 +1,7 @@
-import matplotlib.pyplot as plt
-
 from StockData.QueryAssistanceModule.Query import Query
 from StockData.DataDownloadModule.OnlineDataSource import InvestingCom
 from StockData.StockDataHolder import StockDataHolder
 from DataProcessing.StatisticalDataAnalysis import StatisticalDataAnalysis
-from DataProcessing.VolumeDataAnalysis import PurchasePotential
 from DataPlotting.Histogram import HistogramPlotter
 from DataPlotting.Histogram import StackedHistogramPlotter
 from DataPlotting.Corridor import PriceCorridor
@@ -13,16 +10,20 @@ from IndicatorsCalculation.SupplyDemandBased import SupplyOnDemand
 from IndicatorsCalculation.ProbabilisticDataBased import StatisticalTrend
 import datetime
 
+days_to_check = 360
+
 stock_data = StockDataHolder()
 
 query = Query()
-"""wig20 """
-query.company = "wig20"
-query.country = "poland"
-query.start_date = datetime.date.today() - datetime.timedelta(days=90)
+"""wig20 S&P 500"""
+"""Poland United States"""
+query.company = "pko"
+query.country = "Poland"
+query.start_date = datetime.date.today() - datetime.timedelta(days=days_to_check)
 query.end_date = datetime.date.today()
 
 online_db = InvestingCom()
+print(online_db.get_all_indicies_for_country(query.country, show=True))
 
 stock_data.query = query
 stock_data.data_source = online_db
@@ -32,6 +33,14 @@ stat_data_analysis = StatisticalDataAnalysis(stock_data)
 stat_data_analysis.init()
 stat_data_analysis.calculate_price_level_strength()
 
-purchase_potential = PurchasePotential(stock_data)
-purchase_potential.calculate_purchase_potential()
-purchase_potential.plot()
+supply_on_demand = SupplyOnDemand()
+supply_on_demand.set_stock_data(stock_data=stock_data)
+supply_on_demand.calculate_indicator()
+supply_on_demand.plot()
+
+stat_data_analysis.plot().stacked_plot()
+stat_data_analysis.plot().price_corridor()
+
+stat_trend = StatisticalTrend(stock_data=stock_data, data_interval=14)
+stat_trend.calculate_indicator()
+stat_trend.plot()

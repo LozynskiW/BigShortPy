@@ -1,6 +1,7 @@
 import copy
 
 import numpy as np
+import pandas as pd
 from matplotlib.colors import ListedColormap
 from matplotlib.gridspec import GridSpec
 import seaborn as sns
@@ -11,6 +12,87 @@ from matplotlib import pyplot as plt
 
 
 class PriceCorridor(DataPlottingInterface.DataPlottingClassInterface):
+
+    def __init__(self):
+        self.__analysis_outcome = None
+        self.__stock_data = None
+
+    @property
+    def analysis_outcome(self):
+        return self.__analysis_outcome
+
+    def set_data(self, analysis_outcome):
+        if len(analysis_outcome) < 0:
+            raise ValueError("Length of histogram array is zero, no data to plot")
+
+        if len(analysis_outcome.keys()) < 4:
+            raise ValueError("Wrong form of data, impossible to plot")
+
+        if analysis_outcome['histogram'][0][0] == analysis_outcome['histogram'][0][1]:
+            raise ValueError("Zero length of histogram bin, impossible to plot")
+
+        self.__analysis_outcome = analysis_outcome
+
+    @property
+    def stock_data(self):
+        return self.__stock_data
+
+    @stock_data.setter
+    def stock_data(self, stock_data: StockData.StockDataHolder.StockDataHolder):
+
+        if stock_data.raw_data is None:
+            raise ValueError("No data in stock data")
+
+        self.__stock_data = stock_data
+        self.__stock_data.set_main_data('weekly')
+
+    def plot_data(self, latest_price="off", highlight='on', color_bear='red',
+                  color_bull='green'):
+
+        histogram_bull = self.__analysis_outcome['histogram_bull']
+        histogram_bear = self.__analysis_outcome['histogram_bear']
+
+        ox_labels = self.__stock_data.convert().to_dates_array()
+
+        close = self.__stock_data.convert().to_np_array(series="Close")
+        # open = self.__stock_data.convert().to_np_array(series="Open") no use
+        high = self.__stock_data.convert().to_np_array(series="High")
+        low = self.__stock_data.convert().to_np_array(series="Low")
+
+        ox = []  # prices
+        oy_bear = []
+        oy_bull = []
+        for i in range(0, len(histogram_bull)):
+            ox.append(histogram_bull[i][0])
+            oy_bear.append(histogram_bear[i][2])
+            oy_bull.append(histogram_bull[i][2])
+
+        ox_1 = [i for i in range(0, len(high))]
+
+        for i in range(0, len(close)):
+            plt.vlines(i, close[i], high[i], color='green', linewidths=2, zorder=1)
+            plt.vlines(i, close[i], low[i], color='red', linewidths=2, zorder=1)
+        plt.scatter(ox_1, high, marker='_', color='green', linewidths=1, zorder=1)
+        plt.scatter(ox_1, low, marker='_', color='red', linewidths=1, zorder=1)
+        plt.plot(ox_1, close, color='black')
+
+        for i in range(0, len(histogram_bull) - 1):
+            if histogram_bull[i][2] > histogram_bear[i][2]:
+                plt.axhspan(ymin=histogram_bull[i][0], ymax=histogram_bull[i + 1][0], facecolor='green', alpha=0.2)
+            elif histogram_bull[i][2] < histogram_bear[i][2]:
+                plt.axhspan(ymin=histogram_bull[i][0], ymax=histogram_bull[i + 1][0], facecolor='red', alpha=0.2)
+
+        plt.legend(['Cena zamknięcia w danym tygodniu'])
+        plt.xticks([i for i in range(0, len(high))], ox_labels, rotation=90)
+
+        plt.title('Ruch ceny w danych tygodniach')
+        plt.xlabel('Tygodnie')
+        plt.ylabel('Cena')
+        plt.grid()
+        plt.show()
+
+
+class BoxPlotCorridor(DataPlottingInterface.DataPlottingClassInterface):
 
     def __init__(self):
         self.__analysis_outcome = None
@@ -150,6 +232,147 @@ class TrendCorridor(DataPlottingInterface.DataPlottingClassInterface):
         plt.ylabel('Cena')
         plt.grid()
         plt.show()
+
+
+class TrendCorridor_OverlappingDensities(DataPlottingInterface.DataPlottingClassInterface):
+
+    def __init__(self):
+        self.__analysis_outcome = None
+
+    @property
+    def analysis_outcome(self):
+        return self.__analysis_outcome
+
+    def set_data(self, analysis_outcome):
+
+        if len(analysis_outcome) < 0:
+            raise ValueError("Length of histogram array is zero, no data to plot")
+
+        if len(analysis_outcome.keys()) < 2:
+            raise ValueError("Wrong form of data, impossible to plot")
+
+        self.__analysis_outcome = analysis_outcome
+
+    def plot_data(self, latest_price="off", highlight='on', color_bear='red',
+                  color_bull='green'):
+
+        fig, axs = plt.subplots(len(self.__analysis_outcome.keys()), sharex=True)
+
+        index = 0
+
+        for dataset_key in self.__analysis_outcome:
+            dataset = self.__analysis_outcome[dataset_key]
+            start = dataset['from']
+            end = dataset['to']
+
+            ox = []
+            oy_top = []
+            oy_bottom = []
+
+            try:
+                histogram_top = dataset['histogram_bull']
+                histogram_bottom = dataset['histogram_bear']
+                for i in range(0, len(histogram_top)):
+                    ox.append(histogram_top[i][0])
+                    oy_bottom.append(histogram_bottom[i][2])
+                    oy_top.append(histogram_top[i][2] + histogram_bottom[i][2])
+            except AttributeError:
+                print("No such datasets found in provided data")
+
+            axs[index].bar(ox, oy_bottom, align='edge', width=ox[1] - ox[0], color=color_bear, alpha=0.5)
+            axs[index].bar(ox, oy_top, align='edge', width=ox[1] - ox[0], color=color_bull, bottom=oy_bottom, alpha=0.5)
+
+            open_price = dataset['open_price']
+            close_price = dataset['close_price']
+            expected_val = dataset['expected_value']
+            """Dane przesunięte o tydzień do przodu xD- TO DO"""
+            print("from:", str(start), "to:", str(end), "open:", open_price, "close:", close_price)
+
+            axs[index].vlines(open_price, 0, np.max(oy_bottom) + np.max(oy_top), color='blue', linewidths=2, zorder=1)
+            axs[index].text(open_price, 0, 'open', rotation=90)
+
+            axs[index].vlines(close_price, 0, np.max(oy_bottom) + np.max(oy_top), color='blue', linewidths=2, zorder=1)
+            axs[index].text(close_price, 0, 'close', rotation=90)
+
+            axs[index].vlines(expected_val, 0, np.max(oy_bottom) + np.max(oy_top), color='black', linewidths=2,
+                              zorder=1)
+
+            axs[index].set_title(str(start) + " - " + str(end))
+
+            axs[index].spines["right"].set_visible(False)
+            axs[index].spines["top"].set_visible(False)
+
+            if index == len(self.__analysis_outcome) - 1:
+                axs[index].set_xlabel("Price bin")
+
+            index += 1
+
+        fig.tight_layout()
+        fig.patch.set_visible(False)
+        plt.show()
+
+    def __get_min_and_max_bin_values(self):
+
+        min_val = 100000000
+        max_val = 0
+        hist_bins = []
+
+        for dataset_key in self.__analysis_outcome.keys():
+            dataset = self.__analysis_outcome[dataset_key]
+            hist_bins = list(map(lambda d: d[0], dataset['histogram']))
+
+            if min(hist_bins) < min_val:
+                min_val = min(hist_bins)
+
+            if max(hist_bins) > max_val:
+                max_val = max(hist_bins)
+
+        precision = hist_bins[1] - hist_bins[0]
+
+        return int(min_val), int(max_val), int(precision)
+
+    def __determine_boundaries_for_dataset(self, key, min_val, max_val, prec):
+        """
+        function to determine how many zeros needs to be added for each dataset so that all datasets have equal length
+        :param key:
+        :param min_val:
+        :param max_val:
+        :param prec:
+        :return:
+        """
+        dataset = None
+
+        try:
+            dataset = self.__analysis_outcome[key]
+
+        except KeyError:
+            raise KeyError("No such key in given analysis_outcomes")
+
+        num_of_zeros_to_add_before_start = int((dataset[0][0] - min_val) / prec)
+        num_of_zeros_to_add_to_end = int((max_val - dataset[len(dataset) - 1][0]) / prec)
+
+        return num_of_zeros_to_add_before_start, num_of_zeros_to_add_to_end
+
+    def __get_all_data_to_one_x(self):
+
+        min_val, max_val, prec = self.__get_min_and_max_bin_values()
+
+        for dataset_key in self.__analysis_outcome.keys():
+
+            num_of_zeros_to_add_before_start, num_of_zeros_to_add_to_end = self.__determine_boundaries_for_dataset(
+                key=dataset_key,
+                min_val=min_val,
+                max_val=max_val,
+                prec=prec
+            )
+
+            for key in ['histogram', 'histogram_bull', "histogram_bear"]:
+                for data in self.__analysis_outcome[key]:
+                    for i in range(0, num_of_zeros_to_add_before_start):
+                        self.__analysis_outcome[dataset_key][key].insert(0, [0, 0, 0])
+                    for i in range(0, num_of_zeros_to_add_to_end):
+                        self.__analysis_outcome[dataset_key][key].insert(len(self.__analysis_outcome[dataset_key][key]),
+                                                                         [0, 0, 0])
 
 
 class HistogramCorridor(DataPlottingInterface.DataPlottingClassInterface):

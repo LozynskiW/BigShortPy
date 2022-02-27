@@ -61,3 +61,13 @@ class InvestingCom(DataSourceInterface):
             from_date=investing_format(self.__query.start_date),
             to_date=investing_format(self.__query.end_date),
             interval=interval)
+
+    def get_all_indicies_for_country(self, country, show=False):
+
+        indices = investpy.indices.get_indices(country)
+
+        if show:
+            for index in indices['name']:
+                print(index)
+
+        return indices

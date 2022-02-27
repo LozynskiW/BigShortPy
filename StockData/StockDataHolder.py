@@ -58,8 +58,12 @@ class StockDataHolder:
         self.set_query_for_datasource()
 
         self.__data['daily'] = self.__save_data().daily()
-        self.__data['weekly'] = self.__save_data().weekly()
-        self.__data['monthly'] = self.__save_data().monthly()
+
+        if (self.__query.end_date - self.__query.start_date).days > 7:
+            self.__data['weekly'] = self.__save_data().weekly()
+
+        if (self.__query.end_date - self.__query.start_date).days > 30:
+            self.__data['monthly'] = self.__save_data().monthly()
 
         self.raw_data = self.__data['daily']
 
@@ -126,10 +130,11 @@ class StockDataHolder:
             raise ValueError("Data must be panda DataFrame")
 
         def to_np_array(self, series):
-
+            "From oldest to newest"
             out = []
 
             for d in self.__stock_data.query.get_dates_array(date_format='iso_string'):
+
                 try:
                     out.append(self.__stock_data.raw_data[series][d])
                 except KeyError:
@@ -138,7 +143,7 @@ class StockDataHolder:
             return out
 
         def to_dates_array(self, date_format="datetime"):
-
+            "From oldest to newest"
             out = []
 
             for d in self.__stock_data.query.get_dates_array(date_format='iso_string'):

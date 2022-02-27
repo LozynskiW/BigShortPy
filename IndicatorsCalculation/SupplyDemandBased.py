@@ -23,24 +23,20 @@ class SupplyOnDemand(IndicatorClassInterface, ABC):
         data = self.__stock_data.raw_data
         close = data['Close']
         open = data['Open']
+        high = data['High']
+        low = data['Low']
         volume = data['Volume']
 
-        supply_on_demand = []
+        all_volume = sum(volume)
 
-        """pierwsze dane"""
-        if close[0] > open[0]:
+        supply_on_demand = [all_volume]
 
-            supply_on_demand.append(volume[0])
-        else:
-            supply_on_demand.append(-1*volume[0])
-
-        """reszta"""
-
+        """Cel - obliczenie ile zostało potencjalnych nabywców"""
         for date in self.__stock_data.convert().to_dates_array(date_format="iso_string"):
             if close[date] > open[date]:
-                supply_on_demand.append(volume[date] + supply_on_demand[len(supply_on_demand) - 1])
+                supply_on_demand.append(volume[date] - supply_on_demand[-1])
             else:
-                supply_on_demand.append(volume[date] - supply_on_demand[len(supply_on_demand) - 1])
+                supply_on_demand.append(volume[date] + supply_on_demand[-1])
 
         self.__supply_on_demand = supply_on_demand
 

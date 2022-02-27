@@ -23,7 +23,7 @@ class IndicatorClassInterface:
         raise NotImplementedError
 
     @abstractmethod
-    def __set_required_analysis_outcome(self):
+    def __set_required_analysis_outcome(self, analysis_outcome):
         raise NotImplementedError
 
     @abstractmethod
