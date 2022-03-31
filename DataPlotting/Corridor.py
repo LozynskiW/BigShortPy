@@ -60,12 +60,12 @@ class PriceCorridor(DataPlottingInterface.DataPlottingClassInterface):
         low = self.__stock_data.convert().to_np_array(series="Low")
 
         ox = []  # prices
-        oy_bear = []
-        oy_bull = []
+        oy_ticks_range = []
         for i in range(0, len(histogram_bull)):
             ox.append(histogram_bull[i][0])
-            oy_bear.append(histogram_bear[i][2])
-            oy_bull.append(histogram_bull[i][2])
+
+            if histogram_bull[i][2] is not 0:
+                oy_ticks_range.append(histogram_bull[i][1])
 
         ox_1 = [i for i in range(0, len(high))]
 
@@ -84,6 +84,7 @@ class PriceCorridor(DataPlottingInterface.DataPlottingClassInterface):
 
         plt.legend(['Cena zamknięcia w danym tygodniu'])
         plt.xticks([i for i in range(0, len(high))], ox_labels, rotation=90)
+        plt.yticks(np.arange(int(np.floor(min(oy_ticks_range)/10))*10, int(np.floor(max(oy_ticks_range)/10))*10+1, 20))
 
         plt.title('Ruch ceny w danych tygodniach')
         plt.xlabel('Tygodnie')

@@ -10,20 +10,19 @@ from IndicatorsCalculation.SupplyDemandBased import SupplyOnDemand
 from IndicatorsCalculation.ProbabilisticDataBased import StatisticalTrend
 import datetime
 
-days_to_check = 360
+days_to_check = 180
 
 stock_data = StockDataHolder()
 
 query = Query()
-"""wig20 S&P 500"""
+"""wig20 S&P 500 chf/pln"""
 """Poland United States"""
-query.company = "pko"
+query.company = "wig20"
 query.country = "Poland"
 query.start_date = datetime.date.today() - datetime.timedelta(days=days_to_check)
 query.end_date = datetime.date.today()
 
 online_db = InvestingCom()
-print(online_db.get_all_indicies_for_country(query.country, show=True))
 
 stock_data.query = query
 stock_data.data_source = online_db

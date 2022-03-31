@@ -63,6 +63,8 @@ class StackedHistogramPlotter(DataPlottingInterface.DataPlottingClassInterface):
         plt.bar(ox, oy_bottom, align='edge', width=ox[1] - ox[0], color=color_bottom)
         plt.bar(ox, oy_top, align='edge', width=ox[1] - ox[0], color=color_top, bottom=oy_bottom)
 
+        plt.xticks(np.arange(int(np.floor(min(ox)/10))*10, int(np.floor(max(ox)/10))*10+1, 10), rotation=90)
+
         if latest_record == "on":
             try:
                 plt.vlines(self.__analysis_outcome['latest_price'], 0, max(oy_top)+max(oy_bottom), color='black', linewidths=2)
