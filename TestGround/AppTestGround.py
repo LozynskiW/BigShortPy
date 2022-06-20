@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 
+import IndicatorsCalculation.ProbabilisticDataBased
 from StockData.QueryAssistanceModule.Query import Query
 from StockData.DataDownloadModule.OnlineDataSource import InvestingCom
 from StockData.StockDataHolder import StockDataHolder
@@ -12,6 +13,7 @@ from IndicatorsCalculation.ProbabilisticDataBased import DemandSupplyStrength
 from IndicatorsCalculation.SupplyDemandBased import SupplyOnDemand
 from IndicatorsCalculation.ProbabilisticDataBased import StatisticalTrend
 import datetime
+from IndicatorsCalculation.ProbabilisticDataBased import InformationEntropyAnalysis
 
 stock_data = StockDataHolder()
 
@@ -32,6 +34,14 @@ stat_data_analysis = StatisticalDataAnalysis(stock_data)
 stat_data_analysis.init()
 stat_data_analysis.calculate_price_level_strength()
 
-purchase_potential = PurchasePotential(stock_data)
-purchase_potential.calculate_purchase_potential()
-purchase_potential.plot()
+"""
+entropy_analyser = InformationEntropyAnalysis(stock_data=stock_data)
+entropy_analyser.calculate_indicator(normalisation='std')
+
+entropy_analyser.plot().price_corridor()
+"""
+
+regression_to_mean_test = IndicatorsCalculation.ProbabilisticDataBased.RegressionToMean()
+regression_to_mean_test.set_stock_data(stock_data=stock_data)
+exp_vals = regression_to_mean_test.calculate_indicator(type='moving_average', data_interval=6)
+regression_to_mean_test.plot()

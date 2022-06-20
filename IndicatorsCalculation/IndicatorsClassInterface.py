@@ -9,33 +9,45 @@ class IndicatorClassInterface:
 
     is_indicator = True
     __analysis_engine = None
+    __analysis_outcome = None
+    __stock_data = None
+    __indicator = None
 
-    @abstractmethod
+    def set_analysis_engine(self, analysis_engine):
+        self.__analysis_engine = analysis_engine
+
+    def get_analysis_engine(self):
+        return self.__analysis_engine
+
     def set_stock_data(self, stock_data):
 
-        if self.__analysis_engine is None:
+        if stock_data is None:
             raise AttributeError
         else:
-            self.__init_analysis_engine(stock_data=stock_data)
+            self.__stock_data = stock_data
+            self.__init_analysis_engine(stock_data=self.__stock_data)
 
-        self.__set_required_analysis_outcome()
-
-        raise NotImplementedError
-
-    @abstractmethod
-    def __set_required_analysis_outcome(self, analysis_outcome):
-        raise NotImplementedError
-
-    @abstractmethod
     def __init_analysis_engine(self, stock_data):
-        raise NotImplementedError
+        self.__analysis_engine.set_stock_data(stock_data=stock_data)
+        self.__analysis_engine.init()
+
+    def get_analysis_outcome(self):
+        return self.__analysis_engine.get_analysis_outcome()
+
+    def get_indicator(self):
+        return self.__indicator
+
+    def set_indicator(self, indicator):
+        self.__indicator = indicator
+
+    def get_stock_data(self):
+        return self.__stock_data
+
+    def __set_required_analysis_outcome(self, analysis_outcome):
+        self.__analysis_outcome = analysis_outcome
 
     @abstractmethod
     def calculate_indicator(self):
-        raise NotImplementedError
-
-    @abstractmethod
-    def get_indicator(self):
         raise NotImplementedError
 
     @abstractmethod

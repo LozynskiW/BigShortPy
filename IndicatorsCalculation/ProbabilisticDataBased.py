@@ -2,10 +2,17 @@ import copy
 import datetime
 from abc import ABC
 
+import scipy.stats
+import scipy.stats as stat
+
+import numpy as np
 from matplotlib import pyplot as plt
 
-from DataPlotting.Corridor import TrendCorridor, HistogramCorridor, TrendCorridor_OverlappingDensities, BoxPlotCorridor
+from DataPlotting.Corridor import TrendCorridor, HistogramCorridor, TrendCorridor_OverlappingDensities, BoxPlotCorridor, \
+    PriceCorridor, BasicCorridor
 from DataProcessing import StatisticalDataAnalysis
+
+from DataPlotting.Histogram import HistogramPlotter
 from IndicatorsCalculation.IndicatorsClassInterface import IndicatorClassInterface
 from StockData.QueryAssistanceModule.Query import Query
 from DataProcessing.StatisticalDataAnalysis import StatisticalDataAnalysis
@@ -306,50 +313,264 @@ class StatisticalTrend(IndicatorClassInterface, ABC):
 
 class RegressionToMean(IndicatorClassInterface, ABC):
     is_indicator = True
-    __analysis_engine = None
 
     def __init__(self):
+        super().set_analysis_engine(StatisticalDataAnalysis())
         self.__analysis_outcome = []
         self.__indicator = None
         self.__plot_engine = BoxPlotCorridor()
 
-    def set_stock_data(self, stock_data):
+    def calculate_indicator(self, type='moving_average', data_interval=7, window_size=10, sample_position='middle'):
 
-        if self.__analysis_engine is None:
-            raise AttributeError
-        else:
-            self.__init_analysis_engine(stock_data=stock_data)
+        if type not in ['moving_average', 'full_weeks']:
+            raise ValueError("Not supported types")
 
-        self.__set_required_analysis_outcome()
+        if super().get_stock_data() is None:
+            raise ValueError("Set stock_data first")
 
-        raise NotImplementedError
+        if data_interval == 'full_weeks' and (data_interval not in [7, 14, 30]):
+            raise ValueError("For 'full_weeks' type data interval must be 7 or 14 or 30")
 
-    def __set_required_analysis_outcome(self, analysis_outcome):
-        self.__analysis_outcome = analysis_outcome
+        if type == 'moving_average':
+            return self.__calculate_for_moving_average(dates_array=super().get_stock_data().get_dates_arrays_dict()['daily'],
+                                                       stock_data=super().get_stock_data(),
+                                                       window_size=window_size,
+                                                       sample_position=sample_position)
 
-    def __init_analysis_engine(self, stock_data):
-        try:
-            super.__analysis_engine = StatisticalDataAnalysis(stock_data)
-        except AttributeError:
-            print("Error due to stock_data malfunction, stock_data is of proper type")
-        except:
-            raise AttributeError("Incorrect stock data, or set stock data is not of StockDataHolder type")
+        if type == 'full_weeks':
+            bull_exp_vals = []
+            bear_exp_vals = []
+            exp_vals = []
 
-    def calculate_indicator(self):
-        raise NotImplementedError
+            data_in_intervals = super().get_stock_data().convert().divided_into_intervals(interval=7)
 
-    def get_indicator(self):
-        return self.__indicator
+            dates_array = super().get_stock_data().get_dates_arrays_dict()['daily']
+
+            for data_for_interval in data_in_intervals:
+                close = list(map(lambda x: x[0]['Close'], data_for_interval[0]['data']))
+                high = list(map(lambda x: x[0]['High'], data_for_interval[0]['data']))
+                low = list(map(lambda x: x[0]['Low'], data_for_interval[0]['data']))
+                open = list(map(lambda x: x[0]['Open'], data_for_interval[0]['data']))
+                volume = list(map(lambda x: x[0]['Volume'], data_for_interval[0]['data']))
+
+                super().get_analysis_engine().set_data_manually(close=close, high=high, low=low, open=open, volume=volume)
+
+                histogram_bear, histogram_bull, histogram = super().get_analysis_engine().calculate_price_level_strength()
+
+                bull_weights = list(map(lambda x: x[2], histogram_bull))
+                bear_weights = list(map(lambda x: x[2], histogram_bear))
+                weights = list(map(lambda x: x[2], histogram))
+
+                price_values = list(map(lambda x: x[1], histogram))
+
+                bull_exp_vals.append(stat.gmean(a=price_values, weights=bull_weights))
+                bear_exp_vals.append(stat.gmean(a=price_values, weights=bear_weights))
+                exp_vals.append(stat.gmean(a=price_values, weights=weights))
+
+    def __calculate_for_weeks(self):
+
+        bull_exp_vals = []
+        bear_exp_vals = []
+        exp_vals = []
+
+        data_in_intervals = super().get_stock_data().convert().divided_into_intervals(interval=7)
+
+        for data_for_interval in data_in_intervals:
+            close = list(map(lambda x: x[0]['Close'], data_for_interval[0]['data']))
+            high = list(map(lambda x: x[0]['High'], data_for_interval[0]['data']))
+            low = list(map(lambda x: x[0]['Low'], data_for_interval[0]['data']))
+            open = list(map(lambda x: x[0]['Open'], data_for_interval[0]['data']))
+            volume = list(map(lambda x: x[0]['Volume'], data_for_interval[0]['data']))
+
+            super().get_analysis_engine().set_data_manually(close=close, high=high, low=low, open=open, volume=volume)
+
+            histogram_bear, histogram_bull, histogram = super().get_analysis_engine().calculate_price_level_strength()
+
+            bull_exp_vals.append(self.__expected_val(histogram_bull))
+            bear_exp_vals.append(self.__expected_val(histogram_bear))
+            exp_vals.append(self.__expected_val(histogram))
+
+    def __calculate_for_moving_average(self, dates_array, stock_data, window_size=10, sample_position='middle'):
+
+        bull_exp_vals = {}
+        bear_exp_vals = {}
+        exp_vals = {}
+
+        for date_to_calculate_ma in dates_array:
+
+            start_date = date_to_calculate_ma
+
+            try:
+                dict_data = stock_data.get_data(start_date=start_date-datetime.timedelta(days=window_size), end_date=start_date).dict().daily()
+
+                close = self.__get_data_from_dict(dict_data, 'Close')
+                high = self.__get_data_from_dict(dict_data, 'High')
+                low = self.__get_data_from_dict(dict_data, 'Low')
+                open = self.__get_data_from_dict(dict_data, 'Open')
+                volume = self.__get_data_from_dict(dict_data, 'Volume')
+
+                super().get_analysis_engine().set_data_manually(close=close, high=high, low=low, open=open,
+                                                                volume=volume)
+
+                histogram_bear, histogram_bull, histogram = super().get_analysis_engine().calculate_price_level_strength()
+
+                bull_weights = list(map(lambda x: x[2], histogram_bull))
+                bear_weights = list(map(lambda x: x[2], histogram_bear))
+                weights = list(map(lambda x: x[2], histogram))
+                price_values = list(map(lambda x: x[1], histogram))
+
+                exp_vals[date_to_calculate_ma] = np.average(a=price_values, weights=weights)
+                bull_exp_vals[date_to_calculate_ma] = np.average(a=price_values, weights=bull_weights)
+                bear_exp_vals[date_to_calculate_ma] = np.average(a=price_values, weights=bear_weights)
+
+            except ValueError:
+                continue
+
+        multiply_factor = 2
+
+        for key in exp_vals.keys():
+
+            if bull_exp_vals[key] > exp_vals[key] > bear_exp_vals[key] or (bull_exp_vals[key] > bear_exp_vals[key]):
+                bull_exp_vals[key] += multiply_factor * scipy.stats.entropy(bull_weights, base=2)
+                bear_exp_vals[key] -= multiply_factor * scipy.stats.entropy(bear_weights, base=2)
+            elif (bear_exp_vals[key] > exp_vals[key] > bull_exp_vals[key]) or (bear_exp_vals[key] > bull_exp_vals[key]):
+                bull_exp_vals[key] -= multiply_factor * scipy.stats.entropy(bull_weights, base=2)
+                bear_exp_vals[key] += multiply_factor * scipy.stats.entropy(bear_weights, base=2)
+
+
+        self.__indicator = {
+            "bull_exp_vals": bull_exp_vals,
+            "bear_exp_vals": bear_exp_vals,
+            "exp_vals": exp_vals
+        }
+        return bull_exp_vals, bear_exp_vals, exp_vals
+
+    @staticmethod
+    def __get_data_from_dict(data_dict, key):
+
+        output_array = []
+
+        for k in data_dict.keys():
+            output_array.append(data_dict[k][0][key])
+
+        return output_array
+
+    @staticmethod
+    def __check_dates(sample_position, start_date, window_size, date):
+
+        if sample_position not in ['middle', 'left', 'right']:
+            raise ValueError("No such window_position supported")
+
+        if sample_position == 'middle':
+
+            if start_date - datetime.timedelta(days=int(window_size / 2)) <= date < start_date + datetime.timedelta(
+                    days=int(window_size / 2)):
+                return True
+            else:
+                return False
+
+        if sample_position == 'right':
+
+            if start_date - datetime.timedelta(days=window_size) < date >= start_date:
+                return True
+            else:
+                return False
+
+        if sample_position == 'left':
+
+            if start_date <= date > start_date + datetime.timedelta(days=window_size):
+                return True
+            else:
+                return False
+
+        return False
 
     def plot(self):
-        raise NotImplementedError
+        plot_engine = BasicCorridor()
+        plot_engine.set_data(self.__indicator)
+        plot_engine.stock_data = super().get_stock_data()
+        plot_engine.plot_data()
 
-    def __expected_val(self):
+    @staticmethod
+    def __expected_val(histogram):
 
         exp_val = 0
+        p = 0
 
-        for i in self.__analysis_outcome['histogram']:
-
+        for i in histogram:
             exp_val += i[1] * i[2]
+            p += i[2]
 
         return exp_val
+
+    @staticmethod
+    def __std(histogram, mean):
+
+        std = 0
+        for i in histogram:
+
+            std += (i[1] - mean)**2
+
+        std = std/(len(histogram)-1)
+
+        return np.sqrt(std)
+
+
+class InformationEntropyAnalysis(IndicatorClassInterface, ABC):
+
+    def __init__(self, stock_data):
+        super().set_analysis_engine(StatisticalDataAnalysis())
+        super().set_stock_data(stock_data)
+
+    def calculate_indicator(self, normalisation=False):
+
+        analysis_outcome = super().get_analysis_outcome()
+        histogram_data = copy.deepcopy(analysis_outcome['histogram'])
+
+        for i in range(0, len(histogram_data)):
+            if histogram_data[i][2] > 0:
+                p = histogram_data[i][2]
+                histogram_data[i][2] = -1 * np.log2(p) * p
+
+        if normalisation:
+            mean = np.mean(list(map(lambda x: x[2], histogram_data)))
+
+            if normalisation == 'std':
+                std = np.std(list(map(lambda x: x[2], histogram_data)))
+
+                for i in range(0, len(histogram_data)):
+                    histogram_data[i][2] = (histogram_data[i][2] - mean) / std
+            if normalisation == 'mean':
+                for i in range(0, len(histogram_data)):
+                    histogram_data[i][2] = histogram_data[i][2] / mean
+
+        super().set_indicator(histogram_data)
+
+    def get_information_entropy_gradient(self):
+
+        histogram_entropy_gradient_data = copy.deepcopy(super().get_indicator())
+
+        for i in range(1, len(histogram_entropy_gradient_data)):
+            histogram_entropy_gradient_data[i][2] = histogram_entropy_gradient_data[i][2] - \
+                                                    histogram_entropy_gradient_data[i - 1][2]
+
+        return histogram_entropy_gradient_data
+
+    def plot(self):
+        return self.__DataPlotter(stock_data=super().get_stock_data(), entropy_data_analysis=super().get_indicator())
+
+    class __DataPlotter:
+
+        __histogram_plotter = HistogramPlotter()
+        __price_corridor = PriceCorridor()
+
+        def __init__(self, stock_data, entropy_data_analysis):
+            self.__stock_data = stock_data
+            self.__entropy_data_analysis = entropy_data_analysis
+
+        def price_corridor(self):
+            self.__price_corridor.set_data(self.__entropy_data_analysis)
+
+            self.__price_corridor.stock_data = self.__stock_data
+
+            self.__price_corridor.plot_data(division_type='value', division_value=1)

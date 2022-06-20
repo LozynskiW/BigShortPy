@@ -25,12 +25,6 @@ class PriceCorridor(DataPlottingInterface.DataPlottingClassInterface):
         if len(analysis_outcome) < 0:
             raise ValueError("Length of histogram array is zero, no data to plot")
 
-        if len(analysis_outcome.keys()) < 4:
-            raise ValueError("Wrong form of data, impossible to plot")
-
-        if analysis_outcome['histogram'][0][0] == analysis_outcome['histogram'][0][1]:
-            raise ValueError("Zero length of histogram bin, impossible to plot")
-
         self.__analysis_outcome = analysis_outcome
 
     @property
@@ -46,11 +40,15 @@ class PriceCorridor(DataPlottingInterface.DataPlottingClassInterface):
         self.__stock_data = stock_data
         self.__stock_data.set_main_data('weekly')
 
-    def plot_data(self, latest_price="off", highlight='on', color_bear='red',
-                  color_bull='green'):
+    def plot_data(self, division_type='premade_datasets', division_value=0, latest_price="off",
+                  highlight='on', color_bear='red', color_bull='green'):
 
-        histogram_bull = self.__analysis_outcome['histogram_bull']
-        histogram_bear = self.__analysis_outcome['histogram_bear']
+        if division_type == 'premade_datasets':
+            histogram_bull = self.__analysis_outcome['histogram_bull']
+            histogram_bear = self.__analysis_outcome['histogram_bear']
+        else:
+            histogram_bull = self.__analysis_outcome
+            histogram_bear = []
 
         ox_labels = self.__stock_data.convert().to_dates_array()
 
@@ -64,7 +62,7 @@ class PriceCorridor(DataPlottingInterface.DataPlottingClassInterface):
         for i in range(0, len(histogram_bull)):
             ox.append(histogram_bull[i][0])
 
-            if histogram_bull[i][2] is not 0:
+            if histogram_bull[i][2] != 0:
                 oy_ticks_range.append(histogram_bull[i][1])
 
         ox_1 = [i for i in range(0, len(high))]
@@ -76,15 +74,25 @@ class PriceCorridor(DataPlottingInterface.DataPlottingClassInterface):
         plt.scatter(ox_1, low, marker='_', color='red', linewidths=1, zorder=1)
         plt.plot(ox_1, close, color='black')
 
-        for i in range(0, len(histogram_bull) - 1):
-            if histogram_bull[i][2] > histogram_bear[i][2]:
-                plt.axhspan(ymin=histogram_bull[i][0], ymax=histogram_bull[i + 1][0], facecolor='green', alpha=0.2)
-            elif histogram_bull[i][2] < histogram_bear[i][2]:
-                plt.axhspan(ymin=histogram_bull[i][0], ymax=histogram_bull[i + 1][0], facecolor='red', alpha=0.2)
+        if division_type == 'premade_datasets':
+            for i in range(0, len(histogram_bull) - 1):
+                if histogram_bull[i][2] > histogram_bear[i][2]:
+                    plt.axhspan(ymin=histogram_bull[i][0], ymax=histogram_bull[i + 1][0], facecolor='green', alpha=0.2)
+                elif histogram_bull[i][2] < histogram_bear[i][2]:
+                    plt.axhspan(ymin=histogram_bull[i][0], ymax=histogram_bull[i + 1][0], facecolor='red', alpha=0.2)
+
+        if division_type == 'value':
+            for i in range(0, len(histogram_bull) - 1):
+                if histogram_bull[i][2] > division_value:
+                    plt.axhspan(ymin=histogram_bull[i][0], ymax=histogram_bull[i + 1][0], facecolor='green', alpha=0.2)
+                elif histogram_bull[i][2] < -division_value:
+                    plt.axhspan(ymin=histogram_bull[i][0], ymax=histogram_bull[i + 1][0], facecolor='red', alpha=0.2)
 
         plt.legend(['Cena zamknięcia w danym tygodniu'])
         plt.xticks([i for i in range(0, len(high))], ox_labels, rotation=90)
-        plt.yticks(np.arange(int(np.floor(min(oy_ticks_range)/10))*10, int(np.floor(max(oy_ticks_range)/10))*10+1, 20))
+        plt.yticks(
+            np.arange(int(np.floor(min(oy_ticks_range) / 10)) * 10, int(np.floor(max(oy_ticks_range) / 10)) * 10 + 1,
+                      20))
 
         plt.title('Ruch ceny w danych tygodniach')
         plt.xlabel('Tygodnie')
@@ -134,7 +142,7 @@ class BoxPlotCorridor(DataPlottingInterface.DataPlottingClassInterface):
         histogram_bull = self.__analysis_outcome['histogram_bull']
         histogram_bear = self.__analysis_outcome['histogram_bear']
 
-        ox_labels = self.__stock_data.convert().to_dates_array()
+        ox_labels = self.__stock_data.get_dates_arrays_dict()['daily']
 
         close = self.__stock_data.convert().to_np_array(series="Close")
         # open = self.__stock_data.convert().to_np_array(series="Open") no use
@@ -144,6 +152,7 @@ class BoxPlotCorridor(DataPlottingInterface.DataPlottingClassInterface):
         ox = []  # prices
         oy_bear = []
         oy_bull = []
+
         for i in range(0, len(histogram_bull)):
             ox.append(histogram_bull[i][0])
             oy_bear.append(histogram_bear[i][2])
@@ -280,14 +289,23 @@ class TrendCorridor_OverlappingDensities(DataPlottingInterface.DataPlottingClass
             except AttributeError:
                 print("No such datasets found in provided data")
 
+            """
             axs[index].bar(ox, oy_bottom, align='edge', width=ox[1] - ox[0], color=color_bear, alpha=0.5)
             axs[index].bar(ox, oy_top, align='edge', width=ox[1] - ox[0], color=color_bull, bottom=oy_bottom, alpha=0.5)
+            """
+            axs[index].plot(ox, oy_top)
+
+            for i in range(0, len(histogram_top) - 1):
+                if dataset['histogram_bull'][i][2] > dataset['histogram_bear'][i][2]:
+                    axs[index].axvspan(xmin=dataset['histogram_bull'][i][0], xmax=dataset['histogram_bull'][i + 1][0],
+                                       facecolor='green', alpha=0.2)
+                elif dataset['histogram_bull'][i][2] < dataset['histogram_bear'][i][2]:
+                    axs[index].axvspan(xmin=dataset['histogram_bull'][i][0], xmax=dataset['histogram_bull'][i + 1][0],
+                                       facecolor='red', alpha=0.2)
 
             open_price = dataset['open_price']
             close_price = dataset['close_price']
             expected_val = dataset['expected_value']
-            """Dane przesunięte o tydzień do przodu xD- TO DO"""
-            print("from:", str(start), "to:", str(end), "open:", open_price, "close:", close_price)
 
             axs[index].vlines(open_price, 0, np.max(oy_bottom) + np.max(oy_top), color='blue', linewidths=2, zorder=1)
             axs[index].text(open_price, 0, 'open', rotation=90)
@@ -302,6 +320,9 @@ class TrendCorridor_OverlappingDensities(DataPlottingInterface.DataPlottingClass
 
             axs[index].spines["right"].set_visible(False)
             axs[index].spines["top"].set_visible(False)
+
+            axs[index].set_facecolor('none')
+            axs[index].grid(c='black')
 
             if index == len(self.__analysis_outcome) - 1:
                 axs[index].set_xlabel("Price bin")
@@ -533,3 +554,73 @@ class HistogramCorridor(DataPlottingInterface.DataPlottingClassInterface):
             for c in cmap:
                 if c[0] < matrix[i][j] < c[1]:
                     image[i][j] = c[2]
+
+
+class BasicCorridor(DataPlottingInterface.DataPlottingClassInterface):
+
+    def __init__(self):
+        self.__analysis_outcome = None
+        self.__stock_data = None
+
+    @property
+    def analysis_outcome(self):
+        return self.__analysis_outcome
+
+    def set_data(self, analysis_outcome):
+
+        self.__analysis_outcome = analysis_outcome
+
+    @property
+    def stock_data(self):
+        return self.__stock_data
+
+    @stock_data.setter
+    def stock_data(self, stock_data: StockData.StockDataHolder.StockDataHolder):
+
+        if stock_data.raw_data is None:
+            raise ValueError("No data in stock data")
+
+        self.__stock_data = stock_data
+        self.__stock_data.set_main_data('daily')
+
+    def plot_data(self, highlight='on', color_bear='red', color_bull='green'):
+
+        ox_labels = self.__stock_data.get_dates_arrays_dict()['daily']
+
+        close = self.__stock_data.convert().to_np_array(series="Close")
+        high = self.__stock_data.convert().to_np_array(series="High")
+        low = self.__stock_data.convert().to_np_array(series="Low")
+
+        bull_exp_vals = []
+        bear_exp_vals = []
+        exp_vals = []
+
+        for key in self.__analysis_outcome['bull_exp_vals'].keys():
+
+            bull_exp_vals.append(self.__analysis_outcome['bull_exp_vals'][key])
+            bear_exp_vals.append(self.__analysis_outcome['bear_exp_vals'][key])
+            exp_vals.append(self.__analysis_outcome['exp_vals'][key])
+
+        ox = [i for i in range(0, len(close))]  # prices
+
+        for i in range(0, len(close)):
+            plt.vlines(i, close[i], high[i], color='black', linewidths=2, zorder=1)
+            plt.vlines(i, close[i], low[i], color='black', linewidths=2, zorder=1)
+        plt.scatter(ox, high, marker='_', color='black', linewidths=1, zorder=1)
+        plt.scatter(ox, low, marker='_', color='black', linewidths=1, zorder=1)
+
+        offset = int(len(close) - len(bull_exp_vals))
+
+        plt.plot([i for i in range(offset, len(bull_exp_vals)+offset)], bull_exp_vals, color='green')
+        plt.plot([i for i in range(offset, len(bull_exp_vals)+offset)], bear_exp_vals, color='red')
+        plt.plot([i for i in range(offset, len(bull_exp_vals)+offset)], exp_vals, color='blue')
+
+
+        plt.legend(['Cena zamknięcia w danym tygodniu'])
+        plt.xticks([i for i in range(0, len(high))], ox_labels, rotation=90)
+
+        plt.title('Ruch ceny w danych tygodniach')
+        plt.xlabel('Tygodnie')
+        plt.ylabel('Cena')
+        plt.grid()
+        plt.show()

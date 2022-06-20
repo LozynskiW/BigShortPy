@@ -30,7 +30,7 @@ class InvestingCom(DataSourceInterface):
         except RuntimeError:
             print("No data found")
 
-        return []
+        raise AttributeError("No data for given symbol")
 
     def __download_stock_data(self, interval):
         return investpy.get_stock_historical_data(
@@ -62,7 +62,8 @@ class InvestingCom(DataSourceInterface):
             to_date=investing_format(self.__query.end_date),
             interval=interval)
 
-    def get_all_indicies_for_country(self, country, show=False):
+    @staticmethod
+    def get_all_indices_for_country(country, show=False):
 
         indices = investpy.indices.get_indices(country)
 

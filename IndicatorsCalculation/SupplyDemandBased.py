@@ -32,7 +32,7 @@ class SupplyOnDemand(IndicatorClassInterface, ABC):
         supply_on_demand = [all_volume]
 
         """Cel - obliczenie ile zostało potencjalnych nabywców"""
-        for date in self.__stock_data.convert().to_dates_array(date_format="iso_string"):
+        for date in self.__stock_data.get_dates_arrays_dict(date_format="iso_string")['daily']:
             if close[date] > open[date]:
                 supply_on_demand.append(volume[date] - supply_on_demand[-1])
             else:
@@ -42,3 +42,4 @@ class SupplyOnDemand(IndicatorClassInterface, ABC):
 
     def plot(self):
         plt.plot(self.__supply_on_demand)
+        plt.show()
