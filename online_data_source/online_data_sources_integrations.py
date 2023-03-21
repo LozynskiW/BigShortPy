@@ -1,6 +1,6 @@
 from abc import ABC
-from StockData.DataDownloadModule.DataSourceInterface import DataSourceInterface
-from StockData.DataDownloadModule.QueryAssistanceModule.ToString import investing_format, iso_format
+from .online_data_source_interface import DataSourceInterface
+from .util import investing_format, iso_format
 import investpy
 import pandas_datareader.data as web
 import yfinance as yfin

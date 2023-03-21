@@ -3,19 +3,31 @@ import warnings
 
 
 class Query:
+    """
 
-    __start_date = datetime.date.today()
-    __end_date = __start_date + datetime.timedelta(days=1)
-    __company = "company"
-    __country = "country"
+    |<-end_date ------------------------------------ start_date ->|
+    |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+       past                                                  today   time ->
+    """
 
-    @property
-    def start_date(self):
-        return self.__start_date
+    def __init__(self, start_date=datetime.date.today(),
+                 end_date=datetime.date.today() - datetime.timedelta(days=30),
+                 company="company",
+                 country="country"
+                 ):
+
+        self.__start_date = start_date
+        self.__end_date = end_date
+        self.__company = company
+        self.__country = country
 
     @property
     def end_date(self):
         return self.__end_date
+
+    @property
+    def start_date(self):
+        return self.__start_date
 
     @property
     def company(self):
@@ -30,6 +42,7 @@ class Query:
 
         if type(start_date) is not datetime.date:
             raise ValueError("Date type must be datetime")
+
         self.__start_date = start_date
 
     @end_date.setter
@@ -38,9 +51,7 @@ class Query:
         if not end_date:
             raise ValueError("First choose start time")
         if type(end_date) is not datetime.date:
-            raise ValueError("Date type must be datetime")
-        if end_date < self.__start_date:
-            raise ValueError("End date must be later then start date")
+            raise ValueError("Date type must be datetime.date")
 
         self.__end_date = end_date
 

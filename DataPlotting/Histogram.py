@@ -211,6 +211,7 @@ class HistogramPlotter(DataPlottingInterface.DataPlottingClassInterface):
 
         plt.figure()
         plt.bar(ox, oy, align='edge', width=ox[1] - ox[0])
+        plt.xticks(np.arange(min(ox), max(ox)+1, 20.0))
 
         plt.xlabel('Przedziały cenowe')
         plt.ylabel(data_label)

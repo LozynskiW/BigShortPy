@@ -1,4 +1,4 @@
-from StockData.QueryAssistanceModule.Query import Query
+from StockData.DataDownloadModule.QueryAssistanceModule.Query import Query
 from StockData.DataDownloadModule.OnlineDataSource import InvestingCom
 from StockData.StockDataHolder import StockDataHolder
 from DataProcessing.StatisticalDataAnalysis import StatisticalDataAnalysis

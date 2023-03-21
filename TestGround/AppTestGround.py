@@ -1,19 +1,9 @@
-import matplotlib.pyplot as plt
-
 import IndicatorsCalculation.ProbabilisticDataBased
-from StockData.QueryAssistanceModule.Query import Query
+from StockData.DataDownloadModule.QueryAssistanceModule.Query import Query
 from StockData.DataDownloadModule.OnlineDataSource import InvestingCom
 from StockData.StockDataHolder import StockDataHolder
 from DataProcessing.StatisticalDataAnalysis import StatisticalDataAnalysis
-from DataProcessing.VolumeDataAnalysis import PurchasePotential
-from DataPlotting.Histogram import HistogramPlotter
-from DataPlotting.Histogram import StackedHistogramPlotter
-from DataPlotting.Corridor import PriceCorridor
-from IndicatorsCalculation.ProbabilisticDataBased import DemandSupplyStrength
-from IndicatorsCalculation.SupplyDemandBased import SupplyOnDemand
-from IndicatorsCalculation.ProbabilisticDataBased import StatisticalTrend
 import datetime
-from IndicatorsCalculation.ProbabilisticDataBased import InformationEntropyAnalysis
 
 stock_data = StockDataHolder()
 

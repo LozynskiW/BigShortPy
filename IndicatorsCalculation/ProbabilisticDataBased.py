@@ -8,13 +8,13 @@ import scipy.stats as stat
 import numpy as np
 from matplotlib import pyplot as plt
 
-from DataPlotting.Corridor import TrendCorridor, HistogramCorridor, TrendCorridor_OverlappingDensities, BoxPlotCorridor, \
+from DataPlotting.Corridor import TrendCorridor_OverlappingDensities, BoxPlotCorridor, \
     PriceCorridor, BasicCorridor
 from DataProcessing import StatisticalDataAnalysis
 
 from DataPlotting.Histogram import HistogramPlotter
 from IndicatorsCalculation.IndicatorsClassInterface import IndicatorClassInterface
-from StockData.QueryAssistanceModule.Query import Query
+from StockData.DataDownloadModule.QueryAssistanceModule.Query import Query
 from DataProcessing.StatisticalDataAnalysis import StatisticalDataAnalysis
 
 
@@ -188,16 +188,18 @@ class StatisticalTrend(IndicatorClassInterface, ABC):
         query = Query()
         query.company = self.__stock_data.query.company
         query.country = self.__stock_data.query.country
-        query.start_date = time_intervals[0][1]
-        query.end_date = time_intervals[0][0]
+        #query.start_date = time_intervals[0][1]
+        #query.end_date = time_intervals[0][0]
 
         initial_query = copy.deepcopy(self.__stock_data.query)
         self.__stock_data.query = query
         self.__trend_plot = {}
 
         for time_interval in time_intervals:
-            query.start_date = time_interval[1]
-            query.end_date = time_interval[0]
+            #query.start_date = time_interval[1]
+            #query.end_date = time_interval[0]
+            query.start_date = query.start_date - datetime.timedelta(self.__data_interval)
+            print(query.start_date, query.end_date)
             self.__stock_data.query = query
             self.__stock_data.init()
 
@@ -207,15 +209,15 @@ class StatisticalTrend(IndicatorClassInterface, ABC):
 
             self.set_required_analysis_outcome(self.__data_processor.get_analysis_outcome())
 
-            self.__trend_plot[query.end_date] = {
+            self.__trend_plot[query.start_date] = { #end_date
                 "histogram": self.__data_processor.get_analysis_outcome()['histogram'],
                 "histogram_bull": self.__data_processor.get_analysis_outcome()['histogram_bull'],
                 "histogram_bear": self.__data_processor.get_analysis_outcome()['histogram_bear'],
                 "expected_value": self.__expected_value(self.__data_processor.get_analysis_outcome()['histogram']),
                 "mode": self.__mode(self.__data_processor.get_analysis_outcome()['histogram']),
                 "latest_price": self.__data_processor.get_analysis_outcome()['latest_price'],
-                "from": time_interval[1],
-                "to": time_interval[0],
+                "from": query.start_date, #time_interval[1]
+                "to": query.end_date, #time_interval[0]
                 "open_price": self.__stock_data.raw_data['Open'][0],
                 "close_price": self.__stock_data.raw_data['Close'][-1]
             }

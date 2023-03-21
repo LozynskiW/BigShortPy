@@ -2,7 +2,7 @@ import datetime
 
 import pandas.core.frame
 
-import StockData.QueryAssistanceModule.Query
+import StockData.DataDownloadModule.QueryAssistanceModule.Query
 
 
 class StockDataHolder:
@@ -29,7 +29,7 @@ class StockDataHolder:
     @query.setter
     def query(self, query):
 
-        if type(query) is not StockData.QueryAssistanceModule.Query.Query:
+        if type(query) is not StockData.DataDownloadModule.QueryAssistanceModule.Query.Query:
             raise ValueError("Query must be a query object")
         self.__query = query
 
@@ -52,8 +52,10 @@ class StockDataHolder:
         self.__data = data
 
     def init(self):
+
         if self.__query is None or self.__data_source is None:
             raise AttributeError("First make sure query and data source is set")
+
         self.set_query_for_datasource()
 
         self.__data['daily'] = self.__download_data().daily()
@@ -73,8 +75,10 @@ class StockDataHolder:
 
         if interval == 'daily':
             self.__raw_data = self.__data['daily']
+
         if interval == 'weekly':
             self.__raw_data = self.__data['weekly']
+
         if interval == 'monthly':
             self.__raw_data = self.__data['monthly']
 
